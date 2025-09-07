@@ -1,5 +1,7 @@
 import pandas as pd
+import matplotlib.pyplot as plt
 from access import get_feature_vector
+import osmnx as ox
 
 # Define the features to query (used in both access and assess)
 FEATURES = [
@@ -56,7 +58,6 @@ def get_counts(pois):
             poi_counts[feature_name] = 0
     return poi_counts
 
-
 def prepare_data(df):
     """
     Prepares the data by fetching geospatial features and creating a DataFrame.
@@ -92,6 +93,31 @@ def prepare_data(df):
     X = pd.DataFrame(feature_vectors, index=df.index)
     y = pd.Series(y, index=df.index)
     return X, y
+    
+def plot_city_map(city_name, latitude, longitude, box_size_km):
+    """
+    Plots a street map of a given city.
+    This function can be used for visual assessment of the area being queried.
+
+    Parameters
+    ----------
+    city_name : str
+        The name of the city to plot.
+    latitude : float
+        Latitude of the center point.
+    longitude : float
+        Longitude of the center point.
+    box_size_km : float
+        Size of the bounding box in kilometers.
+    """
+    print(f"Plotting street map for {city_name}...")
+    try:
+        G = ox.graph_from_point((latitude, longitude), dist=box_size_km * 1000, network_type="all")
+        fig, ax = ox.plot_graph(G, show=False, close=True, bgcolor="#ffffff", edge_color="#333333")
+        plt.show()
+        print("Plotting complete.")
+    except Exception as e:
+        print(f"Error plotting map for {city_name}: {e}")
 
 if __name__ == "__main__":
     # Combine and split city data for a demonstration
@@ -119,3 +145,12 @@ if __name__ == "__main__":
     X_test, y_test = prepare_data(df_test)
     print("\nTest Data (X_test) Shape:", X_test.shape)
     print("Test Labels (y_test) Shape:", y_test.shape)
+    
+    # Example usage of the new plot_city_map function
+    print("\n" + "="*50 + "\n")
+    plot_city_map(
+        'Cambridge, England',
+        CITIES_ENGLAND['Cambridge, England']['latitude'],
+        CITIES_ENGLAND['Cambridge, England']['longitude'],
+        2
+    )
