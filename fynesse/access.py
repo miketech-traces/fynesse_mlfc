@@ -480,5 +480,13 @@ def load_agricultural_production(file_path: str) -> pd.DataFrame:
     """
     return pd.read_excel(file_path)
 
+# access.py
+import pandas as pd
+
+def load_maize_data(file_path: str) -> pd.DataFrame:
+    return pd.read_csv(file_path)
+
+def load_population_data(file_path: str) -> pd.DataFrame:
+    return pd.read_csv(file_path)
 
 
