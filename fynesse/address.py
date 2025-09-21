@@ -252,3 +252,13 @@ def ols_summary(X: pd.DataFrame, y: pd.Series):
     ols = sm.OLS(y, Xc, missing='drop').fit()
     return ols.summary()
 
+# adress.py  (data cleaning)
+import pandas as pd
+
+def clean_maize_data(maize_df: pd.DataFrame) -> pd.DataFrame:
+    maize_df['Harvested_Area_Ha'] = pd.to_numeric(maize_df['Harvested_Area_Ha'], errors='coerce')
+    maize_df['Production_Tons'] = pd.to_numeric(maize_df['Production_Tons'], errors='coerce')
+    maize_df['Yield_t_per_ha'] = pd.to_numeric(maize_df['Yield_t_per_ha'], errors='coerce')
+    return maize_df.dropna(subset=['Yield_t_per_ha', 'Harvested_Area_Ha', 'Production_Tons'])
+
+
