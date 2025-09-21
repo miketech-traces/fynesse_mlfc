@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
-from fynesse.assess import prepare_data, CITIES_KENYA, CITIES_ENGLAND
+#from fynesse.assess import prepare_data, CITIES_KENYA, CITIES_ENGLAND
 
 
 def run_model():
