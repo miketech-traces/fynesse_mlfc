@@ -178,3 +178,187 @@ def data() -> Union[pd.DataFrame, None]:
         logger.error(f"Unexpected error loading data: {e}")
         print(f"Error loading data: {e}")
         return None
+
+"""
+access.py
+Data loading and preprocessing helpers for the maize yield notebook.
+Refactored from the notebook into reusable functions so you can import them.
+"""
+
+from typing import Dict, Tuple
+import os
+import pandas as pd
+import numpy as np
+
+def _read_file(path: str) -> pd.DataFrame:
+    """Read CSV or Excel into a dataframe (basic auto-detect)."""
+    path = str(path)
+    if path.lower().endswith(('.xls', '.xlsx')):
+        return pd.read_excel(path)
+    else:
+        return pd.read_csv(path)
+
+def load_datafile_dict(data_files: Dict[str, str]) -> Dict[str, pd.DataFrame]:
+    """
+    Given a dict of name -> path, read all files and return a dict of DataFrames.
+    Example:
+      data_files = {'maize': 'data/Maize-Production.xlsx', 'population': 'data/pop.csv'}
+    """
+    dfs = {}
+    for key, path in data_files.items():
+        if not os.path.exists(path):
+            raise FileNotFoundError(f\"File for key '{key}' not found: {path}\")
+        dfs[key] = _read_file(path)
+    return dfs
+
+def melt_year_columns(df: pd.DataFrame, id_vars: list = None, year_column_name: str = 'Year') -> pd.DataFrame:
+    """
+    Transform a wide table with year columns (e.g., columns '2012','2013',...) into long format.
+    Heuristics: treat any column whose name is a 4-digit year as a year column.
+    """
+    if id_vars is None:
+        # assume non-year columns are id_vars
+        id_vars = [c for c in df.columns if not (isinstance(c, str) and c.strip().isdigit() and len(c.strip()) == 4)]
+    # detect year-like columns
+    year_cols = [c for c in df.columns if isinstance(c, str) and c.strip().isdigit() and len(c.strip()) == 4]
+    if not year_cols:
+        # fallback: detect columns that look like '20xx' anywhere in the name
+        year_cols = [c for c in df.columns if isinstance(c, str) and any(ch.isdigit() for ch in c)]
+    # melt
+    melted = pd.melt(df, id_vars=id_vars, value_vars=year_cols, var_name=year_column_name, value_name='value')
+    # coerce year to int where possible
+    try:
+        melted[year_column_name] = melted[year_column_name].astype(int)
+    except Exception:
+        pass
+    return melted
+
+def clean_numeric_columns(df: pd.DataFrame, columns: list):
+    """
+    Attempt to coerce listed columns to numeric; strips commas and non-numeric chars.
+    Returns the modified DataFrame.
+    """
+    for col in columns:
+        if col in df.columns:
+            df[col] = df[col].astype(str).str.replace(',', '').str.replace(' ', '')
+            df[col] = pd.to_numeric(df[col].replace(['', 'nan', 'None'], np.nan), errors='coerce')
+    return df
+
+def compute_yield(df: pd.DataFrame, production_col: str, area_col: str, yield_col: str = 'Yield_t_per_ha'):
+    """
+    Compute yield = production / area. Attempt to handle units gracefully.
+    By default expects production in tonnes and area in hectares so result is t/ha.
+    """
+    if production_col not in df.columns or area_col not in df.columns:
+        raise KeyError('production or area column not found in DataFrame')
+    df = df.copy()
+    # avoid division by zero
+    df[area_col] = df[area_col].replace({0: np.nan})
+    df[yield_col] = df[production_col] / df[area_col]
+    return df
+
+def merge_on_common_keys(base_df: pd.DataFrame, other_df: pd.DataFrame, on: list = None, how: str='left'):
+    """
+    Simple wrapper for pd.merge with a safety check.
+    """
+    if on is None:
+        # try automatic common columns
+        on = list(set(base_df.columns).intersection(set(other_df.columns)))
+        if not on:
+            raise ValueError("No common columns to merge on; please provide 'on' list.")
+    return base_df.merge(other_df, on=on, how=how)
+
+def basic_feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add commonly used targets/features seen in the notebook:
+      - log transforms of yield and production
+      - year-over-year growth per County
+      - z-score of yield per year (or globally)
+      - low_yield_flag (below 25th percentile)
+      - anomalies relative to county mean
+    This function expects columns: 'County', 'Year', 'Yield_t_per_ha', 'Total_Production' (optional)
+    """
+    df = df.copy()
+    # log transforms (handle non-positive values)
+    if 'Yield_t_per_ha' in df.columns:
+        df['target_log_yield'] = np.where(df['Yield_t_per_ha'] > 0, np.log(df['Yield_t_per_ha']), np.nan)
+        df['target_yield_t_per_ha'] = df['Yield_t_per_ha']
+
+    if 'Total_Production' in df.columns:
+        df['target_log_production'] = np.where(df['Total_Production'] > 0, np.log(df['Total_Production']), np.nan)
+        df['target_total_production'] = df['Total_Production']
+
+    # county-year mean and anomaly
+    if {'County', 'Year'}.issubset(df.columns) and 'Yield_t_per_ha' in df.columns:
+        county_mean = df.groupby('County')['Yield_t_per_ha'].transform('mean')
+        df['target_yield_anomaly'] = df['Yield_t_per_ha'] - county_mean
+        df['target_yield_zscore'] = (df['Yield_t_per_ha'] - county_mean) / df['Yield_t_per_ha'].std(ddof=0)
+
+        # year-over-year growth
+        df = df.sort_values(['County', 'Year'])
+        df['target_yield_growth'] = df.groupby('County')['Yield_t_per_ha'].pct_change()
+
+        # low yield flag
+        low_threshold = df['Yield_t_per_ha'].quantile(0.25)
+        df['target_low_yield_flag'] = (df['Yield_t_per_ha'] < low_threshold).astype(int)
+
+    return df
+
+# Example: helper that loads maize + population and returns merged df
+def load_and_prepare_all(data_files: Dict[str,str], production_col_guess='Production', area_col_guess='Area'):
+    """
+    Convenience wrapper that attempts to load known datasets and produce a finished dataframe.
+    data_files should be a dict containing at least keys 'maize' and optionally 'population'.
+    """
+    dfs = load_datafile_dict(data_files)
+    maize = dfs.get('maize')
+    if maize is None:
+        raise KeyError(\"data_files must include 'maize' key pointing to the maize file path.\")
+    # try to detect production/area columns
+    prod_cols = [c for c in maize.columns if production_col_guess.lower() in c.lower() or 'production' in c.lower()]
+    area_cols = [c for c in maize.columns if area_col_guess.lower() in c.lower() or 'area' in c.lower()]
+    # if the file has year columns, melt them
+    melted = melt_year_columns(maize)
+    # rename common columns if present
+    if 'County' not in melted.columns:
+        # heuristics: find a column that looks like a county/name
+        for candidate in ['County', 'county', 'District', 'Region', 'CountyName']:
+            if candidate in maize.columns:
+                melted = melted.rename(columns={candidate: 'County'})
+                break
+    # attempt to map production/area/value columns
+    # prefer explicit columns if present; otherwise assume 'value' is production
+    if 'value' in melted.columns and not prod_cols:
+        melted = melted.rename(columns={'value': 'Total_Production'})
+    elif prod_cols:
+        melted = melted.rename(columns={prod_cols[0]: 'Total_Production'})
+
+    if area_cols:
+        melted = melted.rename(columns={area_cols[0]: 'Area'})
+    # coerce numeric
+    melted = clean_numeric_columns(melted, ['Total_Production', 'Area'])
+    # compute yield
+    if 'Total_Production' in melted.columns and 'Area' in melted.columns:
+        melted = compute_yield(melted, 'Total_Production', 'Area')
+
+    # merge population if available
+    if 'population' in dfs:
+        pop = dfs['population']
+        # try to rename/pop columns to Year and County
+        if 'Year' not in pop.columns and 'year' in pop.columns:
+            pop = pop.rename(columns={'year': 'Year'})
+        if 'County' not in pop.columns:
+            for c in pop.columns:
+                if 'county' in c.lower():
+                    pop = pop.rename(columns={c: 'County'})
+                    break
+        try:
+            merged = merge_on_common_keys(melted, pop, on=['County', 'Year'], how='left')
+        except Exception:
+            merged = melted
+    else:
+        merged = melted
+
+    final = basic_feature_engineering(merged)
+    return final
+
