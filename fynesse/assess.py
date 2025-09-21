@@ -400,3 +400,27 @@ def merge_datasets(maize_df: pd.DataFrame, population_df: pd.DataFrame) -> pd.Da
     merged_df['Area_per_land'] = merged_df['Harvested_Area_Ha'] / (merged_df['LandArea'] + 1e-6)
     return merged_df.dropna(subset=['Total_Population19', 'LandArea'])
 
+import pandas as pd
+
+def merge_datasets(maize_df: pd.DataFrame, population_df: pd.DataFrame) -> pd.DataFrame:
+    """Merge maize and population data"""
+    # Merge on County and Year
+    merged_df = pd.merge(
+        maize_df,
+        population_df[['County', 'Total_Population19', 'LandArea', 'Population Density']],
+        on='County',
+        how='left'
+    )
+
+    # Create new features
+    merged_df['Yield_per_capita'] = merged_df['Production_Tons'] / (merged_df['Total_Population19'] + 1e-6)
+    merged_df['Harvested_Area_per_capita'] = merged_df['Harvested_Area_Ha'] / (merged_df['Total_Population19'] + 1e-6)
+    merged_df['Production_per_capita'] = merged_df['Production_Tons'] / (merged_df['Total_Population19'] + 1e-6)
+    merged_df['Area_per_land'] = merged_df['Harvested_Area_Ha'] / (merged_df['LandArea'] + 1e-6)
+
+    # Drop rows with missing population data
+    merged_df = merged_df.dropna(subset=['Total_Population19', 'LandArea'])
+
+    return merged_df
+
+
