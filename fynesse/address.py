@@ -182,3 +182,73 @@ def analyze_data(data: Union[pd.DataFrame, Any]) -> dict[str, Any]:
         logger.error(f"Error during data analysis: {e}")
         print(f"Error analyzing data: {e}")
         return {"error": str(e)}
+
+"""
+address.py
+Model training, evaluation and utility functions.
+Refactored from the notebook into callable functions.
+"""
+
+from typing import Tuple, List
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split, cross_val_score, KFold
+from sklearn.linear_model import LinearRegression, RidgeCV, LassoCV
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+import joblib
+import statsmodels.api as sm
+
+def get_feature_target(df: pd.DataFrame, feature_cols: List[str], target_col: str) -> Tuple[pd.DataFrame, pd.Series]:
+    """Return X (DataFrame) and y (Series) for modeling (drops NA rows)."""
+    df2 = df.copy()
+    X = df2[feature_cols].copy()
+    y = df2[target_col].copy()
+    # drop rows with NA in X or y
+    mask = X.notnull().all(axis=1) & y.notnull()
+    X = X.loc[mask, :]
+    y = y.loc[mask]
+    return X, y
+
+def train_linear_regression(X: pd.DataFrame, y: pd.Series, test_size=0.2, random_state=42, return_model=True):
+    """
+    Train a simple OLS LinearRegression and return model and test-split results.
+    Returns: model, X_train, X_test, y_train, y_test, y_pred
+    """
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    if return_model:
+        return model, X_train, X_test, y_train, y_test, y_pred
+    else:
+        return X_train, X_test, y_train, y_test, y_pred
+
+def evaluate_regression(y_true, y_pred) -> dict:
+    """Return common regression metrics (R2, RMSE, MAE)."""
+    r2 = r2_score(y_true, y_pred)
+    mse = mean_squared_error(y_true, y_pred)
+    rmse = np.sqrt(mse)
+    mae = mean_absolute_error(y_true, y_pred)
+    return {'r2': r2, 'mse': mse, 'rmse': rmse, 'mae': mae}
+
+def cross_validate_linear(X: pd.DataFrame, y: pd.Series, cv=5, scoring='r2') -> dict:
+    """Perform cross-validation and return mean and std of scores."""
+    model = LinearRegression()
+    kf = KFold(n_splits=cv, shuffle=True, random_state=42)
+    scores = cross_val_score(model, X, y, cv=kf, scoring=scoring)
+    return {'scores': scores, 'mean': float(scores.mean()), 'std': float(scores.std())}
+
+def save_model(model, path: str):
+    """Save model to disk using joblib."""
+    joblib.dump(model, path)
+
+def load_model(path: str):
+    """Load joblib model."""
+    return joblib.load(path)
+
+def ols_summary(X: pd.DataFrame, y: pd.Series):
+    """Fit statsmodels OLS and return summary object (for diagnostics)."""
+    Xc = sm.add_constant(X)
+    ols = sm.OLS(y, Xc, missing='drop').fit()
+    return ols.summary()
+
