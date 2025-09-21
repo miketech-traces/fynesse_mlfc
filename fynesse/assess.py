@@ -294,3 +294,78 @@ def view(data: Union[pd.DataFrame, Any]) -> None:
 def labelled(data: Union[pd.DataFrame, Any]) -> Union[pd.DataFrame, Any]:
     """Provide a labelled set of data ready for supervised learning."""
     raise NotImplementedError
+
+
+"""
+assess.py
+Exploratory data analysis and plotting helpers.
+Refactored plotting/EDA from the notebook.
+"""
+
+from typing import List
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+sns.set(style="whitegrid")
+
+def describe_df(df: pd.DataFrame, columns: List[str] = None):
+    """Print and return descriptive stats for selected columns (or all numeric columns)."""
+    if columns is None:
+        stats = df.describe(include='all')
+    else:
+        stats = df[columns].describe(include='all')
+    print(stats)
+    return stats
+
+def plot_correlation_matrix(df: pd.DataFrame, features: List[str], figsize=(8,6)):
+    """Plot correlation heatmap for provided features."""
+    corr = df[features].corr()
+    plt.figure(figsize=figsize)
+    sns.heatmap(corr, annot=True, fmt=".2f", square=True, cmap='coolwarm')
+    plt.title("Feature correlation matrix")
+    plt.show()
+
+def plot_histograms(df: pd.DataFrame, columns: List[str], bins=30, figsize=(10,6)):
+    """Plot histograms for a list of columns."""
+    n = len(columns)
+    cols = min(3, n)
+    rows = int(np.ceil(n/cols))
+    plt.figure(figsize=figsize)
+    for i, col in enumerate(columns, 1):
+        plt.subplot(rows, cols, i)
+        df[col].dropna().hist(bins=bins)
+        plt.title(col)
+    plt.tight_layout()
+    plt.show()
+
+def plot_scatter(df: pd.DataFrame, x: str, y: str, hue: str = None, figsize=(7,5)):
+    """Scatter plot of x vs y; optionally color by hue."""
+    plt.figure(figsize=figsize)
+    sns.scatterplot(data=df, x=x, y=y, hue=hue)
+    plt.title(f"{y} vs {x}")
+    plt.show()
+
+def plot_residuals(y_true, y_pred, bins=30):
+    """Plot residual distribution and residuals vs predicted."""
+    residuals = (y_true - y_pred)
+    plt.figure(figsize=(10,4))
+    plt.subplot(1,2,1)
+    sns.histplot(residuals, bins=bins, kde=True)
+    plt.title("Residual distribution")
+    plt.subplot(1,2,2)
+    plt.scatter(y_pred, residuals, alpha=0.6)
+    plt.axhline(0, color='black', linewidth=0.8)
+    plt.xlabel("Predicted")
+    plt.ylabel("Residuals")
+    plt.title("Residuals vs Predicted")
+    plt.tight_layout()
+    plt.show()
+
+def qq_plot(residuals):
+    """QQ-plot for residuals against normal distribution."""
+    import pylab, scipy.stats as stats
+    stats.probplot(residuals, dist="norm", plot=pylab)
+    pylab.show()
+
