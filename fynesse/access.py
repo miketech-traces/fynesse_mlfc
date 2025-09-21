@@ -370,38 +370,21 @@ import pandas as pd
 
 def load_maize_data(file_path: str) -> pd.DataFrame:
     """
-    Load and preprocess maize production data from an Excel file.
-
-    The raw Excel file has a structure where each year spans multiple columns 
-    (area, production, yield). This function restructures the data into a 
-    clean long-format DataFrame.
-
-    Parameters
-    ----------
-    file_path : str
-        Path to the maize production Excel file.
-
-    Returns
-    -------
-    pd.DataFrame
-        Cleaned and structured maize production dataset with columns:
-        ['County', 'Year', 'Harvested_Area_Ha', 'Production_Tons', 'Yield_t_per_ha']
+    Load and preprocess maize production data from Excel file.
+    The Excel has merged headers, so we restructure into clean format.
     """
     maize_df = pd.read_excel(file_path)
 
-    # Identify year columns and their positions
+    # Identify year columns
     year_columns = {}
     current_year = None
-
     for idx, col in enumerate(maize_df.columns):
         cell_value = str(maize_df.iloc[0, idx])
         if cell_value.isdigit():
             current_year = int(cell_value)
             year_columns[current_year] = idx
 
-    # Create a new structured dataframe
     structured_data = []
-
     # Process each county row
     for row_idx in range(2, len(maize_df)):
         county = maize_df.iloc[row_idx, 0]
@@ -422,14 +405,15 @@ def load_maize_data(file_path: str) -> pd.DataFrame:
 
             if pd.notna(area) and pd.notna(production) and pd.notna(yield_val):
                 structured_data.append({
-                    'County': county,
-                    'Year': year,
-                    'Harvested_Area_Ha': area,
-                    'Production_Tons': production,
-                    'Yield_t_per_ha': yield_val
+                    "County": county,
+                    "Year": year,
+                    "Harvested_Area_Ha": area,
+                    "Production_Tons": production,
+                    "Yield_t_per_ha": yield_val,
                 })
 
     return pd.DataFrame(structured_data)
+
 
 
 def load_population_data(file_path: str) -> pd.DataFrame:
