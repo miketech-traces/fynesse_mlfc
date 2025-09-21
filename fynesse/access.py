@@ -370,50 +370,46 @@ import pandas as pd
 
 def load_maize_data(file_path: str) -> pd.DataFrame:
     """
-    Load and preprocess maize production data from Excel file.
-    The Excel has merged headers, so we restructure into clean format.
+    Load and preprocess maize production data from Excel.
+    Handles messy headers and restructures into a clean format.
     """
-    maize_df = pd.read_excel(file_path)
+    # Load the raw file (no header parsing, we'll handle manually)
+    raw_df = pd.read_excel(file_path, header=None)
 
-    # Identify year columns
+    # Find columns that contain valid year headers (row 0 usually has them)
     year_columns = {}
     current_year = None
-    for idx, col in enumerate(maize_df.columns):
-        cell_value = str(maize_df.iloc[0, idx])
-        if cell_value.isdigit():
-            current_year = int(cell_value)
+    for idx, cell in enumerate(raw_df.iloc[0]):
+        if str(cell).isdigit():
+            current_year = int(cell)
             year_columns[current_year] = idx
 
     structured_data = []
-    # Process each county row
-    for row_idx in range(2, len(maize_df)):
-        county = maize_df.iloc[row_idx, 0]
+
+    # Loop through counties (from row 2 onwards, since row 0=header, row 1=subheaders)
+    for row_idx in range(2, len(raw_df)):
+        county = raw_df.iloc[row_idx, 0]
         if pd.isna(county):
             continue
 
         for year, col_idx in year_columns.items():
-            area_col = col_idx + 1
-            production_col = col_idx + 2
-            yield_col = col_idx + 3
-
-            if yield_col >= len(maize_df.columns):
+            try:
+                area = raw_df.iloc[row_idx, col_idx + 1]
+                production = raw_df.iloc[row_idx, col_idx + 2]
+                yield_val = raw_df.iloc[row_idx, col_idx + 3]
+            except IndexError:
                 continue
-
-            area = maize_df.iloc[row_idx, area_col]
-            production = maize_df.iloc[row_idx, production_col]
-            yield_val = maize_df.iloc[row_idx, yield_col]
 
             if pd.notna(area) and pd.notna(production) and pd.notna(yield_val):
                 structured_data.append({
-                    "County": county,
+                    "County": str(county).strip(),
                     "Year": year,
                     "Harvested_Area_Ha": area,
                     "Production_Tons": production,
-                    "Yield_t_per_ha": yield_val,
+                    "Yield_t_per_ha": yield_val
                 })
 
     return pd.DataFrame(structured_data)
-
 
 
 def load_population_data(file_path: str) -> pd.DataFrame:
