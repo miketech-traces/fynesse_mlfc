@@ -362,4 +362,131 @@ def load_and_prepare_all(data_files: Dict[str,str], production_col_guess='Produc
     final = basic_feature_engineering(merged)
     return final
 
+# Access/access.py
+
+import pandas as pd
+
+def load_maize_data(file_path: str) -> pd.DataFrame:
+    """
+    Load and preprocess maize production data from an Excel file.
+
+    The raw Excel file has a structure where each year spans multiple columns 
+    (area, production, yield). This function restructures the data into a 
+    clean long-format DataFrame.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the maize production Excel file.
+
+    Returns
+    -------
+    pd.DataFrame
+        Cleaned and structured maize production dataset with columns:
+        ['County', 'Year', 'Harvested_Area_Ha', 'Production_Tons', 'Yield_t_per_ha']
+    """
+    maize_df = pd.read_excel(file_path)
+
+    # Identify year columns and their positions
+    year_columns = {}
+    current_year = None
+
+    for idx, col in enumerate(maize_df.columns):
+        cell_value = str(maize_df.iloc[0, idx])
+        if cell_value.isdigit():
+            current_year = int(cell_value)
+            year_columns[current_year] = idx
+
+    # Create a new structured dataframe
+    structured_data = []
+
+    # Process each county row
+    for row_idx in range(2, len(maize_df)):
+        county = maize_df.iloc[row_idx, 0]
+        if pd.isna(county):
+            continue
+
+        for year, col_idx in year_columns.items():
+            area_col = col_idx + 1
+            production_col = col_idx + 2
+            yield_col = col_idx + 3
+
+            if yield_col >= len(maize_df.columns):
+                continue
+
+            area = maize_df.iloc[row_idx, area_col]
+            production = maize_df.iloc[row_idx, production_col]
+            yield_val = maize_df.iloc[row_idx, yield_col]
+
+            if pd.notna(area) and pd.notna(production) and pd.notna(yield_val):
+                structured_data.append({
+                    'County': county,
+                    'Year': year,
+                    'Harvested_Area_Ha': area,
+                    'Production_Tons': production,
+                    'Yield_t_per_ha': yield_val
+                })
+
+    return pd.DataFrame(structured_data)
+
+
+def load_population_data(file_path: str) -> pd.DataFrame:
+    """
+    Load and clean population data from a CSV file.
+
+    Cleans numeric columns by removing commas/spaces and converting 
+    them into numeric dtype. Also adds a 'Year' column for merging.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the population CSV file.
+
+    Returns
+    -------
+    pd.DataFrame
+        Cleaned population dataset with numeric columns and a 'Year' column.
+    """
+    population_df = pd.read_csv(file_path)
+
+    # Clean numeric columns (remove commas and convert to numeric)
+    numeric_columns = [
+        'Total_Population19', 'Male populatio 2019', 'Female population 2019',
+        'Households', 'LandArea', 'Population Density',
+        'Population in 2009', 'Pop_change'
+    ]
+
+    for col in numeric_columns:
+        if col in population_df.columns:
+            population_df[col] = (
+                population_df[col]
+                .astype(str)
+                .str.replace(',', '', regex=False)
+                .str.replace(' ', '', regex=False)
+            )
+            population_df[col] = pd.to_numeric(population_df[col], errors='coerce')
+
+    # Add year column for merging
+    population_df['Year'] = 2019
+
+    return population_df
+
+
+def load_agricultural_production(file_path: str) -> pd.DataFrame:
+    """
+    Load agricultural production data from an Excel file.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the agricultural production Excel file.
+
+    Returns
+    -------
+    pd.DataFrame
+        Raw agricultural production dataset.
+    """
+    return pd.read_excel(file_path)
+
+
 
