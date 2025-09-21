@@ -370,47 +370,57 @@ import pandas as pd
 
 def load_maize_data(file_path: str) -> pd.DataFrame:
     """
-    Load and preprocess maize production data from Excel.
-    Handles messy headers and restructures into a clean format.
+    Load maize production data from Excel with multi-level headers.
+    Restructures into clean long format: County, Year, Area, Production, Yield.
     """
-    # Load the raw file (no header parsing, we'll handle manually)
-    raw_df = pd.read_excel(file_path, header=None)
+    raw_df = pd.read_excel(file_path, header=[0, 1])  # two header rows
 
-    # Find columns that contain valid year headers (row 0 usually has them)
-    year_columns = {}
-    current_year = None
-    for idx, cell in enumerate(raw_df.iloc[0]):
-        if str(cell).isdigit():
-            current_year = int(cell)
-            year_columns[current_year] = idx
+    # Rename the first column to County
+    raw_df = raw_df.rename(columns={raw_df.columns[0]: ("County", "")})
 
     structured_data = []
 
-    # Loop through counties (from row 2 onwards, since row 0=header, row 1=subheaders)
-    for row_idx in range(2, len(raw_df)):
-        county = raw_df.iloc[row_idx, 0]
+    for _, row in raw_df.iterrows():
+        county = row[("County", "")]
         if pd.isna(county):
             continue
 
-        for year, col_idx in year_columns.items():
-            try:
-                area = raw_df.iloc[row_idx, col_idx + 1]
-                production = raw_df.iloc[row_idx, col_idx + 2]
-                yield_val = raw_df.iloc[row_idx, col_idx + 3]
-            except IndexError:
+        for col in raw_df.columns[1:]:
+            year, variable = col
+
+            if not str(year).isdigit():
+                continue  # skip junk
+
+            value = row[col]
+
+            if variable and "Area" in variable:
+                area = value
+            elif variable and "Production" in variable:
+                production = value
+            elif variable and "Yield" in variable:
+                yield_val = value
+            else:
                 continue
 
-            if pd.notna(area) and pd.notna(production) and pd.notna(yield_val):
-                structured_data.append({
-                    "County": str(county).strip(),
-                    "Year": year,
-                    "Harvested_Area_Ha": area,
-                    "Production_Tons": production,
-                    "Yield_t_per_ha": yield_val
-                })
+            # Only append when we have a full set for a given year
+            if (
+                "area" in locals()
+                and "production" in locals()
+                and "yield_val" in locals()
+            ):
+                structured_data.append(
+                    {
+                        "County": str(county).strip(),
+                        "Year": int(year),
+                        "Harvested_Area_Ha": area,
+                        "Production_Tons": production,
+                        "Yield_t_per_ha": yield_val,
+                    }
+                )
+                # Reset placeholders for next loop
+                del area, production, yield_val
 
     return pd.DataFrame(structured_data)
-
 
 def load_population_data(file_path: str) -> pd.DataFrame:
     """
