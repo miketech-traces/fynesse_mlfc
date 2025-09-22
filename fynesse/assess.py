@@ -428,6 +428,8 @@ def merge_datasets(maize_df: pd.DataFrame, population_df: pd.DataFrame) -> pd.Da
 
     return merged_df
 
+import numpy as np
+import pandas as pd
 
 def add_log_features(df: pd.DataFrame) -> pd.DataFrame:
     """
