@@ -520,3 +520,56 @@ def load_maize_production(path: str) -> pd.DataFrame:
     df = df.rename(columns={'Unnamed: 0_level_0': 'County'})
 
     return df
+
+import pandas as pd
+
+def restructure_maize_data(maize_production_df):
+    """
+    Restructure the maize production dataset by unpivoting yearly yield columns
+    into a tidy long-format DataFrame.
+
+    Parameters
+    ----------
+    maize_production_df : pd.DataFrame
+        Original maize production DataFrame with county info and yearly yield columns.
+
+    Returns
+    -------
+    pd.DataFrame
+        Cleaned and restructured DataFrame with columns:
+        ['County', 'Year', 'Yield (MT/HA)']
+    """
+    # Identify the County column name (multi-index assumed: ('County', 'COUNTY'))
+    county_col = ('County', 'COUNTY')
+
+    # Identify the columns containing the yearly yield data
+    yield_cols = [col for col in maize_production_df.columns if col[1] == 'Yield (MT/HA)']
+
+    # Create an empty list to store the unpivoted data
+    unpivoted_data = []
+
+    # Iterate through each row in the original DataFrame
+    for _, row in maize_production_df.iterrows():
+        county = row[county_col]
+        # Iterate through each yearly yield column
+        for col in yield_cols:
+            year = col[0]
+            yield_value = row[col]
+            unpivoted_data.append({'County': county, 'Year': year, 'Yield (MT/HA)': yield_value})
+
+    # Create a new DataFrame from the unpivoted data
+    maize_yield = pd.DataFrame(unpivoted_data)
+
+    # Convert Year to numeric and clean invalid years
+    maize_yield['Year'] = pd.to_numeric(maize_yield['Year'], errors='coerce')
+    maize_yield.dropna(subset=['Year'], inplace=True)
+    maize_yield['Year'] = maize_yield['Year'].astype(int)
+
+    # Convert Yield to numeric and clean invalid values
+    maize_yield['Yield (MT/HA)'] = pd.to_numeric(maize_yield['Yield (MT/HA)'], errors='coerce')
+    maize_yield.dropna(subset=['Yield (MT/HA)'], inplace=True)
+
+    return maize_yield
+
+
+
