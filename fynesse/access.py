@@ -576,13 +576,17 @@ import geopandas as gpd
 
 def load_kenya_map(geojson_url=None):
     """
-    Load Kenya county boundaries from GeoJSON and standardize county names.
+    Load the Kenya counties GeoJSON as a GeoDataFrame.
     """
     if geojson_url is None:
         geojson_url = "https://open.africa/dataset/a8f8b195-aafd-449b-9b1a-ab337fd9925f/resource/4fb2e27e-c001-4b7f-b71d-4fee4a96a0f8/download/kenyan-counties.geojson"
-    
+
     kenya_map = gpd.read_file(geojson_url)
+
+    # Standardize county names
     if "COUNTY" in kenya_map.columns:
         kenya_map["County"] = kenya_map["COUNTY"].str.strip().str.title()
+
     return kenya_map
+
 
