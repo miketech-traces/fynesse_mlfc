@@ -261,4 +261,55 @@ def clean_maize_data(maize_df: pd.DataFrame) -> pd.DataFrame:
     maize_df['Yield_t_per_ha'] = pd.to_numeric(maize_df['Yield_t_per_ha'], errors='coerce')
     return maize_df.dropna(subset=['Yield_t_per_ha', 'Harvested_Area_Ha', 'Production_Tons'])
 
+import matplotlib.pyplot as plt
+import geopandas as gpd
+import pandas as pd
+
+def plot_maize_yield_map(kenya_map: gpd.GeoDataFrame, 
+                         maize_yield: pd.DataFrame, 
+                         year: int, 
+                         ax=None):
+    """
+    Plot maize yield for a given year on the Kenya county map.
+
+    Parameters
+    ----------
+    kenya_map : geopandas.GeoDataFrame
+        GeoDataFrame containing county boundaries with a 'COUNTY' column.
+    maize_yield : pandas.DataFrame
+        DataFrame with columns ['County', 'Year', 'Yield (MT/HA)'].
+    year : int
+        Year to visualize.
+    ax : matplotlib.axes.Axes, optional
+        Matplotlib axis object. If None, a new one will be created.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+        Axis with the plotted map.
+    """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(8, 10))
+
+    # Filter for selected year
+    yearly_data = maize_yield[maize_yield["Year"] == year]
+
+    # Merge with Kenya map
+    merged = kenya_map.merge(yearly_data, left_on="COUNTY", right_on="County")
+
+    # Plot
+    merged.plot(
+        column="Yield (MT/HA)",
+        cmap="YlOrBr",
+        linewidth=0.5,
+        edgecolor="gray",
+        legend=True,
+        legend_kwds={'label': f"Yield (MT/Ha) – {year}"},
+        ax=ax
+    )
+
+    ax.set_title(f"Kenya Maize Yield – {year}", fontsize=16, fontweight="bold")
+    ax.axis("off")
+
+    return ax
 
