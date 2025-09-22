@@ -305,7 +305,7 @@ def basic_feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
-# Example: helper that loads maize + population and returns merged df
+# helper that loads maize + population and returns merged df
 def load_and_prepare_all(data_files: Dict[str,str], production_col_guess='Production', area_col_guess='Area'):
     """
     Convenience wrapper that attempts to load known datasets and produce a finished dataframe.
@@ -362,13 +362,6 @@ def load_and_prepare_all(data_files: Dict[str,str], production_col_guess='Produc
 
     final = basic_feature_engineering(merged)
     return final
-
-# Access/access.py
-
-
-
-
- 
 
 
 
@@ -464,9 +457,6 @@ def load_population_data(file_path):
     return population_df
 
 population_df = load_population_data('2019-population_census-report-per-county.csv')
-
-# Load agricultural production data
-#agricultural_production_df = pd.read_excel('Kenyas_Agricultural_Production.xlsx')
 
 
 import pandas as pd
