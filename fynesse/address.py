@@ -313,3 +313,51 @@ def plot_maize_yield_map(kenya_map: gpd.GeoDataFrame,
 
     return ax
 
+import matplotlib.pyplot as plt
+from matplotlib_scalebar.scalebar import ScaleBar
+
+def plot_avg_yield_map(kenya_map, avg_yield):
+    """
+    Plot average maize yield across counties in Kenya (choropleth).
+    """
+    # Standardize avg_yield county names
+    avg_yield["County"] = avg_yield["County"].str.strip().str.title()
+    
+    # Merge geodata and yield data
+    merged = kenya_map.merge(avg_yield, on="County", how="left")
+    
+    fig, ax = plt.subplots(1, 1, figsize=(14, 12))
+    
+    # Choropleth
+    merged.plot(column="Yield (MT/HA)",
+                cmap="YlOrBr",
+                linewidth=0.5,
+                edgecolor="gray",
+                legend=True,
+                legend_kwds={'label': "Average Maize Yield (MT/Ha, 2012–2020)",
+                             'orientation': "vertical"},
+                ax=ax)
+    
+    # Add outline
+    merged.boundary.plot(ax=ax, color="black", linewidth=1)
+    
+    # Title
+    ax.set_title("Average Maize Yield by County in Kenya (2012–2020)",
+                 fontsize=18, fontweight="bold")
+    
+    # North arrow
+    ax.annotate('N', xy=(0.95, 0.1), xytext=(0.95, 0.2),
+                arrowprops=dict(facecolor='black', width=5, headwidth=15),
+                ha='center', va='center', fontsize=14, xycoords=ax.transAxes)
+    
+    # Scale bar
+    scalebar = ScaleBar(1, units="km", dimension="si-length")
+    ax.add_artist(scalebar)
+    
+    # Attribution
+    ax.annotate("Data: Ministry of Agriculture (2012–2020), Map: Open Africa GeoJSON",
+                xy=(0.5, -0.1), xycoords="axes fraction",
+                ha="center", fontsize=10, color="gray")
+    
+    ax.axis("off")
+    plt.show()
