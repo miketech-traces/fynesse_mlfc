@@ -361,3 +361,70 @@ def plot_avg_yield_map(kenya_map, avg_yield):
     
     ax.axis("off")
     plt.show()
+
+
+# fynesse/address.py (or fynesse/address/maps.py)
+
+import folium
+
+def plot_interactive_yield_map(merged, output_file="kenya_maize_yield_map.html"):
+    """
+    Create an interactive Folium choropleth map of average maize yield by county.
+
+    Parameters
+    ----------
+    merged : GeoDataFrame
+        A GeoDataFrame with geometry and at least ['County', 'Yield (MT/HA)'] columns.
+        Must be in EPSG:4326 (WGS84).
+    output_file : str, optional
+        Path to save the HTML map. Defaults to "kenya_maize_yield_map.html".
+
+    Returns
+    -------
+    folium.Map
+        The interactive Folium map object.
+    """
+
+    # Ensure CRS is WGS84
+    if merged.crs is not None and merged.crs.to_epsg() != 4326:
+        merged = merged.to_crs(epsg=4326)
+
+    # Center of Kenya (approx)
+    kenya_center = [0.0236, 37.9062]
+
+    # Initialize Folium map
+    m = folium.Map(location=kenya_center, zoom_start=6, tiles="cartodbpositron")
+
+    # Choropleth shading
+    folium.Choropleth(
+        geo_data=merged,
+        data=merged,
+        columns=["County", "Yield (MT/HA)"],
+        key_on="feature.properties.County",
+        fill_color="YlOrBr",
+        line_color="black",
+        line_weight=0.5,
+        fill_opacity=0.7,
+        legend_name="Average Maize Yield (MT/Ha, 2012–2020)"
+    ).add_to(m)
+
+    # Add tooltips
+    folium.GeoJson(
+        merged,
+        style_function=lambda x: {
+            "fillColor": "transparent",
+            "color": "black",
+            "weight": 0.5
+        },
+        tooltip=folium.GeoJsonTooltip(
+            fields=["County", "Yield (MT/HA)"],
+            aliases=["County:", "Yield (MT/Ha):"],
+            localize=True
+        )
+    ).add_to(m)
+
+    # Save HTML
+    m.save(output_file)
+
+    return m
+
