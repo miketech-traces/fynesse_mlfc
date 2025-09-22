@@ -1,32 +1,4 @@
 
-import pandas as pd
-
-def load_agricultural_production(path: str) -> pd.DataFrame:
-    """
-    Load agricultural production data from an Excel or CSV file.
-
-    Parameters
-    ----------
-    path : str
-        Path to the agricultural production dataset file.
-
-    Returns
-    -------
-    pd.DataFrame
-        Raw agricultural production data with standardized column names.
-    """
-    # Load depending on file extension
-    if path.endswith(".xlsx") or path.endswith(".xls"):
-        df = pd.read_excel(path)
-    elif path.endswith(".csv"):
-        df = pd.read_csv(path)
-    else:
-        raise ValueError("Unsupported file format. Use .csv or .xlsx")
-
-    # Standardize column names (strip whitespace, lower case)
-    df.columns = df.columns.str.strip().str.lower()
-
-    return df
 
 import osmnx as ox
 import matplotlib.pyplot as plt
@@ -494,7 +466,7 @@ def load_population_data(file_path):
 population_df = load_population_data('2019-population_census-report-per-county.csv')
 
 # Load agricultural production data
-agricultural_production_df = pd.read_excel('Kenyas_Agricultural_Production.xlsx')
+#agricultural_production_df = pd.read_excel('Kenyas_Agricultural_Production.xlsx')
 
 
 import pandas as pd
