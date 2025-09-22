@@ -489,4 +489,86 @@ def load_maize_data(file_path: str) -> pd.DataFrame:
 def load_population_data(file_path: str) -> pd.DataFrame:
     return pd.read_csv(file_path)
 
+import pandas as pd
 
+# Load data with better handling of Excel structure
+def load_maize_data(file_path):
+    """Load and preprocess maize production data"""
+    maize_df = pd.read_excel(file_path)
+
+    # Identify year columns and their positions
+    year_columns = {}
+    current_year = None
+
+    for idx, col in enumerate(maize_df.columns):
+        cell_value = str(maize_df.iloc[0, idx])
+        if cell_value.isdigit():
+            current_year = int(cell_value)
+            year_columns[current_year] = idx
+        elif current_year is not None:
+            # This column belongs to the current year
+            pass
+
+    # Create a new structured dataframe
+    structured_data = []
+
+    # Process each county row
+    for row_idx in range(2, len(maize_df)):
+        county = maize_df.iloc[row_idx, 0]
+        if pd.isna(county):
+            continue
+
+        for year, col_idx in year_columns.items():
+            # Extract data for this year
+            area_col = col_idx + 1
+            production_col = col_idx + 2
+            yield_col = col_idx + 3
+
+            # Check if we have these columns
+            if yield_col >= len(maize_df.columns):
+                continue
+
+            area = maize_df.iloc[row_idx, area_col]
+            production = maize_df.iloc[row_idx, production_col]
+            yield_val = maize_df.iloc[row_idx, yield_col]
+
+            # Only add if we have valid data
+            if pd.notna(area) and pd.notna(production) and pd.notna(yield_val):
+                structured_data.append({
+                    'County': county,
+                    'Year': year,
+                    'Harvested_Area_Ha': area,
+                    'Production_Tons': production,
+                    'Yield_t_per_ha': yield_val
+                })
+
+    return pd.DataFrame(structured_data)
+
+# Load data with improved function
+maize_df = load_maize_data('Maize-Production-2012-2020-Combined.xlsx')
+
+# Load population data with proper cleaning
+def load_population_data(file_path):
+    """Load and clean population data"""
+    population_df = pd.read_csv(file_path)
+
+    # Clean numeric columns (remove commas and convert to numeric)
+    numeric_columns = ['Total_Population19', 'Male populatio 2019',
+                       'Female population 2019', 'Households', 'LandArea',
+                       'Population Density', 'Population in 2009', 'Pop_change']
+
+    for col in numeric_columns:
+        if col in population_df.columns:
+            population_df[col] = population_df[col].astype(str).str.replace(',', '').str.replace(' ', '')
+            # Convert to numeric, coercing errors to NaN
+            population_df[col] = pd.to_numeric(population_df[col], errors='coerce')
+
+    # Add year column for merging
+    population_df['Year'] = 2019
+
+    return population_df
+
+population_df = load_population_data('2019-population_census-report-per-county.csv')
+
+# Load agricultural production data
+agricultural_production_df = pd.read_excel('Kenyas_Agricultural_Production.xlsx')
