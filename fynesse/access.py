@@ -364,121 +364,15 @@ def load_and_prepare_all(data_files: Dict[str,str], production_col_guess='Produc
 
 # Access/access.py
 
-# Access/access.py
-
-import pandas as pd
-
-def load_maize_data(file_path: str) -> pd.DataFrame:
-    """
-    Load maize production data from Excel with multi-level headers.
-    Restructures into clean long format: County, Year, Area, Production, Yield.
-    """
-    raw_df = pd.read_excel(file_path, header=[0, 1])  # two header rows
-
-    # Rename the first column to County
-    raw_df = raw_df.rename(columns={raw_df.columns[0]: ("County", "")})
-
-    structured_data = []
-
-    for _, row in raw_df.iterrows():
-        county = row[("County", "")]
-        if pd.isna(county):
-            continue
-
-        for col in raw_df.columns[1:]:
-            year, variable = col
-
-            if not str(year).isdigit():
-                continue  # skip junk
-
-            value = row[col]
-
-            if variable and "Area" in variable:
-                area = value
-            elif variable and "Production" in variable:
-                production = value
-            elif variable and "Yield" in variable:
-                yield_val = value
-            else:
-                continue
-
-            # Only append when we have a full set for a given year
-            if (
-                "area" in locals()
-                and "production" in locals()
-                and "yield_val" in locals()
-            ):
-                structured_data.append(
-                    {
-                        "County": str(county).strip(),
-                        "Year": int(year),
-                        "Harvested_Area_Ha": area,
-                        "Production_Tons": production,
-                        "Yield_t_per_ha": yield_val,
-                    }
-                )
-                # Reset placeholders for next loop
-                del area, production, yield_val
-
-    return pd.DataFrame(structured_data)
-
-def load_population_data(file_path: str) -> pd.DataFrame:
-    """
-    Load and clean population data from a CSV file.
-
-    Cleans numeric columns by removing commas/spaces and converting 
-    them into numeric dtype. Also adds a 'Year' column for merging.
-
-    Parameters
-    ----------
-    file_path : str
-        Path to the population CSV file.
-
-    Returns
-    -------
-    pd.DataFrame
-        Cleaned population dataset with numeric columns and a 'Year' column.
-    """
-    population_df = pd.read_csv(file_path)
-
-    # Clean numeric columns (remove commas and convert to numeric)
-    numeric_columns = [
-        'Total_Population19', 'Male populatio 2019', 'Female population 2019',
-        'Households', 'LandArea', 'Population Density',
-        'Population in 2009', 'Pop_change'
-    ]
-
-    for col in numeric_columns:
-        if col in population_df.columns:
-            population_df[col] = (
-                population_df[col]
-                .astype(str)
-                .str.replace(',', '', regex=False)
-                .str.replace(' ', '', regex=False)
-            )
-            population_df[col] = pd.to_numeric(population_df[col], errors='coerce')
-
-    # Add year column for merging
-    population_df['Year'] = 2019
-
-    return population_df
 
 
-def load_agricultural_production(file_path: str) -> pd.DataFrame:
-    """
-    Load agricultural production data from an Excel file.
 
-    Parameters
-    ----------
-    file_path : str
-        Path to the agricultural production Excel file.
+ 
 
-    Returns
-    -------
-    pd.DataFrame
-        Raw agricultural production dataset.
-    """
-    return pd.read_excel(file_path)
+
+
+
+
 
 # access.py
 import pandas as pd
@@ -572,3 +466,45 @@ population_df = load_population_data('2019-population_census-report-per-county.c
 
 # Load agricultural production data
 agricultural_production_df = pd.read_excel('Kenyas_Agricultural_Production.xlsx')
+
+
+import pandas as pd
+
+# Clean maize data
+def clean_maize_data(maize_df):
+    """Clean maize production data"""
+    # Convert to appropriate data types
+    maize_df['Harvested_Area_Ha'] = pd.to_numeric(maize_df['Harvested_Area_Ha'], errors='coerce')
+    maize_df['Production_Tons'] = pd.to_numeric(maize_df['Production_Tons'], errors='coerce')
+    maize_df['Yield_t_per_ha'] = pd.to_numeric(maize_df['Yield_t_per_ha'], errors='coerce')
+
+    # Remove rows with missing critical values
+    maize_df = maize_df.dropna(subset=['Yield_t_per_ha', 'Harvested_Area_Ha', 'Production_Tons'])
+
+    return maize_df
+
+# Merge data with improved handling
+def merge_datasets(maize_df, population_df):
+    """Merge maize and population data"""
+    # Merge on County and Year
+    merged_df = pd.merge(
+        maize_df,
+        population_df[['County', 'Total_Population19', 'LandArea', 'Population Density']],
+        on='County',
+        how='left'
+    )
+
+    # Create new features
+    merged_df['Yield_per_capita'] = merged_df['Production_Tons'] / (merged_df['Total_Population19'] + 1e-6)
+    merged_df['Harvested_Area_per_capita'] = merged_df['Harvested_Area_Ha'] / (merged_df['Total_Population19'] + 1e-6)
+    merged_df['Production_per_capita'] = merged_df['Production_Tons'] / (merged_df['Total_Population19'] + 1e-6)
+    merged_df['Area_per_land'] = merged_df['Harvested_Area_Ha'] / (merged_df['LandArea'] + 1e-6)
+
+    # Drop rows with missing population data
+    merged_df = merged_df.dropna(subset=['Total_Population19', 'LandArea'])
+
+    return merged_df
+
+# Assuming maize_df and population_df have been loaded previously
+maize_df_clean = clean_maize_data(maize_df)
+df_final = merge_datasets(maize_df_clean, population_df)
