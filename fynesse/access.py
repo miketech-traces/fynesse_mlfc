@@ -505,3 +505,27 @@ def merge_datasets(maize_df, population_df):
 
     return merged_df
 
+
+import pandas as pd
+
+def load_maize_production(path: str) -> pd.DataFrame:
+    """
+    Load maize production data from an Excel file.
+
+    Parameters
+    ----------
+    path : str
+        Path to the Excel file containing maize production data.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with county names and yearly production values.
+    """
+    # Load maize production data
+    df = pd.read_excel(path, skiprows=1, header=[0, 1])
+
+    # Rename the county column
+    df = df.rename(columns={'Unnamed: 0_level_0': 'County'})
+
+    return df
