@@ -443,4 +443,50 @@ def add_log_features(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+import pandas as pd
+
+def restructure_maize_data(maize_production_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Restructure maize production data by unpivoting yearly yield columns
+    and cleaning the Year and Yield values.
+
+    Parameters
+    ----------
+    maize_production_df : pd.DataFrame
+        Original DataFrame loaded from the maize production Excel file.
+
+    Returns
+    -------
+    pd.DataFrame
+        Cleaned and restructured DataFrame with columns:
+        'County', 'Year', 'Yield (MT/HA)'.
+    """
+    # Identify the County column
+    county_col = ('County', 'COUNTY')
+
+    # Identify the yearly yield columns
+    yield_cols = [col for col in maize_production_df.columns if col[1] == 'Yield (MT/HA)']
+
+    # Unpivot data
+    unpivoted_data = []
+    for _, row in maize_production_df.iterrows():
+        county = row[county_col]
+        for col in yield_cols:
+            year = col[0]
+            yield_value = row[col]
+            unpivoted_data.append({'County': county, 'Year': year, 'Yield (MT/HA)': yield_value})
+
+    maize_yield = pd.DataFrame(unpivoted_data)
+
+    # Convert and clean Year
+    maize_yield['Year'] = pd.to_numeric(maize_yield['Year'], errors='coerce')
+    maize_yield.dropna(subset=['Year'], inplace=True)
+    maize_yield['Year'] = maize_yield['Year'].astype(int)
+
+    # Convert and clean Yield
+    maize_yield['Yield (MT/HA)'] = pd.to_numeric(maize_yield['Yield (MT/HA)'], errors='coerce')
+    maize_yield.dropna(subset=['Yield (MT/HA)'], inplace=True)
+
+    return maize_yield
+
 
