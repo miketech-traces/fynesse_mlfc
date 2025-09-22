@@ -505,6 +505,3 @@ def merge_datasets(maize_df, population_df):
 
     return merged_df
 
-# Assuming maize_df and population_df have been loaded previously
-maize_df_clean = clean_maize_data(maize_df)
-df_final = merge_datasets(maize_df_clean, population_df)
