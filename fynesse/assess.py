@@ -429,3 +429,16 @@ def merge_datasets(maize_df: pd.DataFrame, population_df: pd.DataFrame) -> pd.Da
     return merged_df
 
 
+def add_log_features(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add log-transformed versions of selected columns.
+    Modifies df in place and returns it.
+    """
+    df['log_Harvested_Area_Ha'] = np.log1p(df['Harvested_Area_Ha'])
+    df['log_Production_Tons'] = np.log1p(df['Production_Tons'])
+    df['log_Total_Population19'] = np.log1p(df['Total_Population19'])
+    df['log_LandArea'] = np.log1p(df['LandArea'])
+    return df
+
+
+
