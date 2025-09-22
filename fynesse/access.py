@@ -529,3 +529,32 @@ def load_maize_production(path: str) -> pd.DataFrame:
     df = df.rename(columns={'Unnamed: 0_level_0': 'County'})
 
     return df
+
+import pandas as pd
+
+def load_agricultural_production(path: str) -> pd.DataFrame:
+    """
+    Load agricultural production data from an Excel or CSV file.
+
+    Parameters
+    ----------
+    path : str
+        Path to the agricultural production dataset file.
+
+    Returns
+    -------
+    pd.DataFrame
+        Raw agricultural production data with standardized column names.
+    """
+    # Load depending on file extension
+    if path.endswith(".xlsx") or path.endswith(".xls"):
+        df = pd.read_excel(path)
+    elif path.endswith(".csv"):
+        df = pd.read_csv(path)
+    else:
+        raise ValueError("Unsupported file format. Use .csv or .xlsx")
+
+    # Standardize column names (strip whitespace, lower case)
+    df.columns = df.columns.str.strip().str.lower()
+
+    return df
