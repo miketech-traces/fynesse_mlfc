@@ -12,6 +12,7 @@ The project was developed in Google Colab and saved here as a Jupyter Notebook.
 
 ---
 ## Project Structure
+```
 Maize_Yield_Predicting_Model.ipynb # Final Jupyter Notebook for Maize Yield Prediction
 README.md # Main project README
 fynesse/
@@ -24,6 +25,7 @@ fynesse/
 ├── test_access.py
 ├── test_assess.py
 └── test_address.py
+```
 
 ## ⚙️ Workflow Overview
 The notebook follows these main steps:
