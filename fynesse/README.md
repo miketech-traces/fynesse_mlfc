@@ -11,6 +11,19 @@ The project was developed in Google Colab and saved here as a Jupyter Notebook.
 - `access.py`, `address.py`, `adress.py`, `assess.py`, `config.py`, `defaults.yml` – supporting files for the project
 
 ---
+## Project Structure
+Maize_Yield_Predicting_Model.ipynb # Final Jupyter Notebook for Maize Yield Prediction
+README.md # Main project README
+fynesse/
+├── access.py # Data access functionality
+├── assess.py # Data assessment and quality checks
+├── address.py # Question addressing and analysis
+├── config.py # Configuration management
+├── defaults.yml # Default configuration values
+└── tests/ # Comprehensive test suite
+├── test_access.py
+├── test_assess.py
+└── test_address.py
 
 ## ⚙️ Workflow Overview
 The notebook follows these main steps:
