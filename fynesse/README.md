@@ -61,3 +61,8 @@ Most required libraries are pre-installed in Colab.
    ```bash
    git clone https://github.com/your-username/fynesse_mlfc.git
    cd fynesse_mlfc/fynesse
+
+
+## License
+
+MIT License - see LICENSE file for details.
